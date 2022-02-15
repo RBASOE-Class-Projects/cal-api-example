@@ -28,7 +28,8 @@ let API_URL =
   "http://localhost:5001/calendarapiexample-849b8/us-central1/generateLink"
 
 if (process.env.FUNCTIONS_EMULATOR) {
-  API_URL = "https://us-central1-calendarapiexample-849b8.cloudfunctions.net"
+  API_URL =
+    "https://us-central1-calendarapiexample-849b8.cloudfunctions.net/generateLink"
 }
 
 // Initialize Firebase
