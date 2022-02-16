@@ -35,13 +35,14 @@ if (process.env.FUNCTIONS_EMULATOR) {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig)
 
-const auth = getAuth()
+const auth = getAuth(app)
 const provider = new GoogleAuthProvider()
 
 function App() {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(null)
   const [isSignedIn, setIsSignedIn] = useState(false)
+  const [authLinkResponse, setAuthLinkResponse] = useState("")
 
   const handleSignOutRequest = () => {
     signOut(auth)
@@ -73,15 +74,11 @@ function App() {
   const generateAuthLink = async () => {
     const request = await fetch(API_URL)
     const data = await request.json()
-    console.log(data)
-    return data
+    setAuthLinkResponse(data.url)
   }
 
   const handleAuthButtonClick = () => {
-    const prom = generateAuthLink()
-    prom.then((data) => {
-      console.log(data.url)
-    })
+    generateAuthLink()
   }
 
   useEffect(() => {
@@ -109,6 +106,8 @@ function App() {
       <span>{token ? JSON.stringify(token) : "/no token"}</span>
       <p />
       <button onClick={handleAuthButtonClick}>Generate Auth Link</button>
+      <p />
+      <span>{authLinkResponse}</span>
     </div>
   )
 }
