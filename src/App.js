@@ -31,8 +31,14 @@ let CA_URL
 let BASE_URL
 let FB_URL
 
+// Initialize Firebase
+const app = initializeApp(firebaseConfig)
+const auth = getAuth(app)
+const db = getFirestore(app)
+
 if (!process.env.REACT_APP_STAGE || process.env.REACT_APP_STAGE === "local") {
   BASE_URL = "http://localhost:5001/calendarapiexample-849b8/us-central1/"
+  connectFirestoreEmulator(db, "localhost", 8080)
 } else {
   BASE_URL = "https://us-central1-calendarapiexample-849b8.cloudfunctions.net/"
 }
@@ -40,12 +46,6 @@ if (!process.env.REACT_APP_STAGE || process.env.REACT_APP_STAGE === "local") {
 PE_URL = BASE_URL + "postEvent"
 CA_URL = BASE_URL + "constructAuthURL"
 FB_URL = BASE_URL + "checkBusy"
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig)
-const auth = getAuth(app)
-const db = getFirestore(app)
-connectFirestoreEmulator(db, "localhost", 8080)
 
 const provider = new GoogleAuthProvider()
 provider.addScope("https://www.googleapis.com/auth/calendar.readonly")

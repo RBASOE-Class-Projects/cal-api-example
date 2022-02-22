@@ -8,19 +8,19 @@ const calendar = google.calendar("v3")
 let REDIR_URL
 let APP_URL
 
+const serviceAccount = require("./serviceaccount.json")
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+})
+
 if (process.env.FUNCTIONS_EMULATOR === "true") {
   functions.logger.info("running on emulator")
-  const serviceAccount = require("./serviceaccount.json")
-
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  })
   REDIR_URL =
     "http://localhost:5001/calendarapiexample-849b8/us-central1/postEventRedirect"
   APP_URL = "http://localhost:3000"
 } else {
   functions.logger.info("running on server")
-  admin.initializeApp()
   REDIR_URL =
     "https://us-central1-calendarapiexample-849b8.cloudfunctions.net/postEventRedirect"
   APP_URL = "https://calendarapiexample-849b8.web.app"
