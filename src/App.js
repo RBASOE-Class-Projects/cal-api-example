@@ -1,18 +1,21 @@
 import "./App.css"
 
+import { initializeApp } from "firebase/app"
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  connectFirestoreEmulator,
+} from "firebase/firestore"
+
 import React, { useState, useEffect } from "react"
 import {
   getAuth,
-  signInWithPopup,
   GoogleAuthProvider,
   signOut,
-  onAuthStateChanged,
+  signInWithCredential,
 } from "firebase/auth"
-
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app"
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -24,25 +27,75 @@ const firebaseConfig = {
   appId: "1:552664563294:web:eefc9b6a16939b1f7a7ecf",
 }
 
-let API_URL =
-  "http://localhost:5001/calendarapiexample-849b8/us-central1/generateLink"
+let PE_URL =
+  "http://localhost:5001/calendarapiexample-849b8/us-central1/postEvent"
 
-if (process.env.FUNCTIONS_EMULATOR) {
-  API_URL =
-    "https://us-central1-calendarapiexample-849b8.cloudfunctions.net/generateLink"
-}
+const CA_URL =
+  "http://localhost:5001/calendarapiexample-849b8/us-central1/constructAuthURL"
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig)
-
 const auth = getAuth(app)
-const provider = new GoogleAuthProvider()
+const db = getFirestore(app)
+connectFirestoreEmulator(db, "localhost", 8080)
 
-function App() {
+const provider = new GoogleAuthProvider()
+provider.addScope("https://www.googleapis.com/auth/calendar.readonly")
+provider.addScope("https://www.googleapis.com/auth/calendar.events")
+provider.setCustomParameters({ prompt: "select_account" })
+
+export async function fetchList(
+  db,
+  collection,
+  list_id,
+  list_attr,
+  setter,
+  mapper
+) {
+  /*
+   ** return a list of values from a collection containing a document with
+   ** the id `list_id` with an attribute `list_attr`.
+   ** mapper is a function that can transform the list before calling the setter.
+   */
+  const docRef = doc(db, collection, list_id)
+  const docSnap = await getDoc(docRef)
+  if (docSnap.exists()) {
+    const data = docSnap.data()
+    if (mapper) {
+      setter(data[list_attr].map(mapper))
+    } else {
+      setter(data[list_attr])
+    }
+  }
+}
+
+function SelectEmail({ emails, handleSelect }) {
+  const [selected, setSelect] = useState("")
+  const doSelect = (e) => {
+    setSelect(e.target.value)
+    if (e.target.value !== "nothing") {
+      handleSelect(e.target.value)
+    }
+  }
+
+  return (
+    <select onChange={doSelect} value={selected}>
+      <option value="nothing">Select an email</option>
+      {emails.map((email) => (
+        <option key={email} value={email}>
+          {email}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+function App(props) {
   const [user, setUser] = useState(null)
-  const [token, setToken] = useState(null)
-  const [isSignedIn, setIsSignedIn] = useState(false)
-  const [authLinkResponse, setAuthLinkResponse] = useState("")
+  const [emails, setEmails] = useState([])
+  const [authURL, setAuthURL] = useState("")
+  const [authCode, setAuthCode] = useState(null)
+  const [listsRead, setListsRead] = useState(false)
 
   const handleSignOutRequest = () => {
     signOut(auth)
@@ -52,62 +105,117 @@ function App() {
       .catch((error) => {})
   }
 
-  const handleSignInRequest = () => {
-    console.log("In sign in request")
-    signInWithPopup(auth, provider)
-      .then((result) => {
-        console.log("Got PopUp Result")
-        const credential = GoogleAuthProvider.credentialFromResult(result)
-        if (credential) {
-          setToken(credential.accessToken)
-          setUser(result.user)
-        }
-      })
-      .catch((error) => {
-        const errorCode = error.code
-        const errorMessage = error.message
-
-        alert(errorMessage + ":" + errorCode)
-      })
-  }
-
-  const generateAuthLink = async () => {
-    const request = await fetch(API_URL)
-    const data = await request.json()
-    setAuthLinkResponse(data.url)
-  }
-
-  const handleAuthButtonClick = () => {
-    generateAuthLink()
-  }
+  useEffect(() => {
+    getAuthURL()
+  }, [])
 
   useEffect(() => {
-    onAuthStateChanged(auth, (aUser) => {
-      if (aUser != null) {
-        setIsSignedIn(true)
-        console.log("Auth state changed: " + aUser.email)
+    const doClientAuth = async (msg) => {
+      const idToken = msg.id_token
+      const access_token = msg.access_token
+      const uid = msg.uid
+      if (!idToken || !access_token || !uid) {
+        console.log("Error: missing idToken, access_token, or uid")
       } else {
-        setIsSignedIn(false)
+        const credential = GoogleAuthProvider.credential(null, access_token)
+        const newCred = await signInWithCredential(auth, credential)
+        setUser(newCred.user)
+        if (emails.indexOf(newCred.user.email) === -1) {
+          // email not in list, add it now.
+          const docRef = doc(db, "config", "lists")
+          const newEmails = [...emails, newCred.user.email]
+          setDoc(docRef, { emails: newEmails }, { merge: true })
+          setEmails(newEmails)
+        } else {
+          console.log("Found email in emails list")
+        }
       }
-      setUser(aUser)
-    })
+    }
+    if (listsRead && authCode) {
+      doClientAuth(authCode)
+    }
+  }, [authCode, listsRead, emails])
+
+  useEffect(() => {
+    const doCode = async () => {
+      let code
+      if (
+        window.location.search &&
+        window.location.search.length > 1 &&
+        window.location.search.split("?").length > 1 &&
+        window.location.search.split("?")[1].slice(0, 5) === "code="
+      ) {
+        try {
+          code = JSON.parse(
+            decodeURIComponent(window.location.search.split("?")[1].slice(5))
+          )
+        } catch (e) {
+          alert("Invalid code")
+          code = null
+        }
+        if (code) {
+          setAuthCode(code)
+        }
+      }
+    }
+    doCode()
+  }, [emails])
+
+  useEffect(() => {
+    const doFetch = async () => {
+      await fetchList(db, "config", "lists", "emails", setEmails)
+      setListsRead(true)
+    }
+    doFetch()
   }, [])
+
+  const getAuthURL = async () => {
+    const request = await fetch(CA_URL)
+    const response = await request.json()
+    setAuthURL(response.authLink)
+  }
+
+  const doAuthRedirect = () => {
+    window.location.href = authURL
+  }
+
+  const postSelectedEvent = async (email) => {
+    const jsonData = { userEmail: user.email, selectedEmail: email }
+    const request = await fetch(PE_URL, {
+      method: "POST",
+      body: JSON.stringify(jsonData),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+    const response = await request.json()
+    console.log(response)
+  }
 
   return (
     <div className="App">
-      {isSignedIn ? (
-        <button onClick={handleSignOutRequest}>Sign Out</button>
+      <span> Test Calendar API </span>
+      <p />
+      {user ? (
+        <>
+          <button onClick={handleSignOutRequest}>Sign Out</button>
+          <p />
+          <span>{user.email}</span>
+          <p />
+          <SelectEmail emails={emails} handleSelect={postSelectedEvent} />
+        </>
       ) : (
-        <button onClick={handleSignInRequest}>Sign In</button>
+        <>
+          <span>{authURL ? "ready" : "not ready"}</span>
+          <p />
+          {authURL ? <button onClick={doAuthRedirect}>Sign In</button> : null}
+        </>
       )}
-      <span>
-        {isSignedIn && user ? JSON.stringify(user.email) : "Not signed in"}
-      </span>
-      <span>{token ? JSON.stringify(token) : "/no token"}</span>
       <p />
-      <button onClick={handleAuthButtonClick}>Generate Auth Link</button>
+      <span>Emails: [{emails && emails.join(", ")}]</span>
+
       <p />
-      <span>{authLinkResponse}</span>
+      <button onClick={postSelectedEvent}>Post</button>
     </div>
   )
 }
