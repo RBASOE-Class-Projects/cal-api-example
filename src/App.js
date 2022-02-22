@@ -26,12 +26,20 @@ const firebaseConfig = {
   messagingSenderId: "552664563294",
   appId: "1:552664563294:web:eefc9b6a16939b1f7a7ecf",
 }
+let PE_URL
+let CA_URL
+let BASE_URL
+let FB_URL
 
-let PE_URL =
-  "http://localhost:5001/calendarapiexample-849b8/us-central1/postEvent"
+if (!process.env.REACT_APP_STAGE || process.env.REACT_APP_STAGE === "local") {
+  BASE_URL = "http://localhost:5001/calendarapiexample-849b8/us-central1/"
+} else {
+  BASE_URL = "https://us-central1-calendarapiexample-849b8.cloudfunctions.net/"
+}
 
-const CA_URL =
-  "http://localhost:5001/calendarapiexample-849b8/us-central1/constructAuthURL"
+PE_URL = BASE_URL + "postEvent"
+CA_URL = BASE_URL + "constructAuthURL"
+FB_URL = BASE_URL + "checkBusy"
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig)
@@ -96,6 +104,8 @@ function App(props) {
   const [authURL, setAuthURL] = useState("")
   const [authCode, setAuthCode] = useState(null)
   const [listsRead, setListsRead] = useState(false)
+  const [selectedEmail, setSelectedEmail] = useState("")
+  const [freeBusy, setFreeBusy] = useState(null)
 
   const handleSignOutRequest = () => {
     signOut(auth)
@@ -115,7 +125,9 @@ function App(props) {
       const access_token = msg.access_token
       const uid = msg.uid
       if (!idToken || !access_token || !uid) {
-        console.log("Error: missing idToken, access_token, or uid")
+        console.log(
+          "Error: missing idToken, access_token, or uid:" + JSON.stringify(msg)
+        )
       } else {
         const credential = GoogleAuthProvider.credential(null, access_token)
         const newCred = await signInWithCredential(auth, credential)
@@ -179,8 +191,12 @@ function App(props) {
     window.location.href = authURL
   }
 
-  const postSelectedEvent = async (email) => {
-    const jsonData = { userEmail: user.email, selectedEmail: email }
+  const handleSelect = (email) => {
+    setSelectedEmail(email)
+  }
+
+  const postSelectedEvent = async () => {
+    const jsonData = { userEmail: user.email, selectedEmail: selectedEmail }
     const request = await fetch(PE_URL, {
       method: "POST",
       body: JSON.stringify(jsonData),
@@ -189,6 +205,20 @@ function App(props) {
       },
     })
     const response = await request.json()
+    console.log(response)
+  }
+
+  const queryFreeBusy = async () => {
+    const jsonData = { userEmail: user.email, selectedEmail: selectedEmail }
+    const request = await fetch(FB_URL, {
+      method: "POST",
+      body: JSON.stringify(jsonData),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+    const response = await request.json()
+    setFreeBusy(response)
     console.log(response)
   }
 
@@ -202,11 +232,11 @@ function App(props) {
           <p />
           <span>{user.email}</span>
           <p />
-          <SelectEmail emails={emails} handleSelect={postSelectedEvent} />
+          <SelectEmail emails={emails} handleSelect={handleSelect} />
         </>
       ) : (
         <>
-          <span>{authURL ? "ready" : "not ready"}</span>
+          <span>{authURL ? `ready:${authURL}` : "not ready"}</span>
           <p />
           {authURL ? <button onClick={doAuthRedirect}>Sign In</button> : null}
         </>
@@ -216,6 +246,18 @@ function App(props) {
 
       <p />
       <button onClick={postSelectedEvent}>Post</button>
+
+      <p />
+      <button onClick={queryFreeBusy}>Query Free</button>
+      <p />
+      <span>{process.env.REACT_APP_STAGE}</span>
+
+      <p />
+
+      <div>{freeBusy && "free:" + JSON.stringify(freeBusy.data.calendars)}</div>
+
+      <p />
+      <span>{CA_URL}</span>
     </div>
   )
 }
