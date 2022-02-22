@@ -230,34 +230,34 @@ function App(props) {
         <>
           <button onClick={handleSignOutRequest}>Sign Out</button>
           <p />
-          <span>{user.email}</span>
+          <span>Logged in: {user.email}</span>
           <p />
           <SelectEmail emails={emails} handleSelect={handleSelect} />
         </>
       ) : (
         <>
-          <span>{authURL ? `ready:${authURL}` : "not ready"}</span>
+          <span>{authURL ? "ready" : "not ready"}</span>
           <p />
           {authURL ? <button onClick={doAuthRedirect}>Sign In</button> : null}
         </>
       )}
       <p />
-      <span>Emails: [{emails && emails.join(", ")}]</span>
+      <span>Optional Emails: [{emails && emails.join(", ")}]</span>
 
-      <p />
-      <button onClick={postSelectedEvent}>Post</button>
+      {selectedEmail ? (
+        <>
+          <p />
+          <button onClick={postSelectedEvent}>Post</button>
 
-      <p />
-      <button onClick={queryFreeBusy}>Query Free</button>
-      <p />
-      <span>{process.env.REACT_APP_STAGE}</span>
-
-      <p />
-
+          <p />
+          <button onClick={queryFreeBusy}>Query Free</button>
+          <p />
+        </>
+      ) : null}
       <div>{freeBusy && "free:" + JSON.stringify(freeBusy.data.calendars)}</div>
 
       <p />
-      <span>{CA_URL}</span>
+      <span> Application is: {process.env.REACT_APP_STAGE}</span>
     </div>
   )
 }
