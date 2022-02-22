@@ -47,11 +47,6 @@ PE_URL = BASE_URL + "postEvent"
 CA_URL = BASE_URL + "constructAuthURL"
 FB_URL = BASE_URL + "checkBusy"
 
-const provider = new GoogleAuthProvider()
-provider.addScope("https://www.googleapis.com/auth/calendar.readonly")
-provider.addScope("https://www.googleapis.com/auth/calendar.events")
-provider.setCustomParameters({ prompt: "select_account" })
-
 export async function fetchList(
   db,
   collection,
