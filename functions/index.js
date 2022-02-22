@@ -34,9 +34,6 @@ const oAuth2Client = new OAuth2(
   REDIR_URL
 )
 
-// Create and Deploy Your First Cloud Functions
-// https://firebase.google.com/docs/functions/write-firebase-functions
-
 const addTokenToDatabase = async (tokens, email) => {
   return await db
     .doc(`tokens/${email}`)
