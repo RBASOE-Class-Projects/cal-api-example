@@ -17,15 +17,10 @@ import {
   signInWithCredential,
 } from "firebase/auth"
 
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
+
 // Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyB6n3-CCg0yxCqqZ9EpxH_ArScDkK6axcY",
-  authDomain: "calendarapiexample-849b8.firebaseapp.com",
-  projectId: "calendarapiexample-849b8",
-  storageBucket: "calendarapiexample-849b8.appspot.com",
-  messagingSenderId: "552664563294",
-  appId: "1:552664563294:web:eefc9b6a16939b1f7a7ecf",
-}
+import firebaseConfig from "./firebaseConfig.json"
 
 let BASE_URL // base url
 
@@ -100,6 +95,10 @@ function App(props) {
   const [selectedEmail, setSelectedEmail] = useState("")
   const [freeBusy, setFreeBusy] = useState(null)
 
+  const location = useLocation()
+  const history = useNavigate()
+  const [params, setParams] = useSearchParams()
+
   const handleSignOutRequest = () => {
     signOut(auth)
       .then(() => {
@@ -144,28 +143,23 @@ function App(props) {
 
   useEffect(() => {
     const doCode = async () => {
-      let code
-      if (
-        window.location.search &&
-        window.location.search.length > 1 &&
-        window.location.search.split("?").length > 1 &&
-        window.location.search.split("?")[1].slice(0, 5) === "code="
-      ) {
+      const codeString = params.get("code")
+      if (codeString) {
+        let code
         try {
-          code = JSON.parse(
-            decodeURIComponent(window.location.search.split("?")[1].slice(5))
-          )
+          code = JSON.parse(decodeURIComponent(codeString))
         } catch (e) {
           alert("Invalid code")
           code = null
         }
+        setParams({ code: "" })
         if (code) {
           setAuthCode(code)
         }
       }
     }
     doCode()
-  }, [emails])
+  }, [params, setParams])
 
   useEffect(() => {
     const doFetch = async () => {
@@ -251,9 +245,15 @@ function App(props) {
       <div>{freeBusy && "free:" + JSON.stringify(freeBusy.data.calendars)}</div>
 
       <p />
-      <span> Application is: {process.env.REACT_APP_STAGE}</span>
+      <span>Application is running in: {process.env.REACT_APP_STAGE} mode</span>
     </div>
   )
+}
+
+export function Foo() {
+  useEffect(() => {}, [])
+
+  return <>Component</>
 }
 
 export default App

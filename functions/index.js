@@ -9,6 +9,7 @@ let REDIR_URL
 let APP_URL
 
 const serviceAccount = require("./serviceaccount.json")
+const client = require("./client.json")
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -28,10 +29,11 @@ if (process.env.FUNCTIONS_EMULATOR === "true") {
 
 const db = admin.firestore()
 
-const CLIENT_ID =
-  "552664563294-9vitc92divm2b5hm4k8bir54orjvetqt.apps.googleusercontent.com"
-const CLIENT_SECRET = "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"
-const oAuth2Client = new OAuth2(CLIENT_ID, CLIENT_SECRET, REDIR_URL)
+const oAuth2Client = new OAuth2(
+  client.CLIENT_ID,
+  client.CLIENT_SECRET,
+  REDIR_URL
+)
 
 const addTokenToDatabase = async (tokens, email) => {
   return await db
