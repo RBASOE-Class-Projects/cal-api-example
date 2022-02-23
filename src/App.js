@@ -26,10 +26,8 @@ const firebaseConfig = {
   messagingSenderId: "552664563294",
   appId: "1:552664563294:web:eefc9b6a16939b1f7a7ecf",
 }
-let PE_URL
-let CA_URL
-let BASE_URL
-let FB_URL
+
+let BASE_URL // base url
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig)
@@ -43,9 +41,9 @@ if (!process.env.REACT_APP_STAGE || process.env.REACT_APP_STAGE === "local") {
   BASE_URL = "https://us-central1-calendarapiexample-849b8.cloudfunctions.net/"
 }
 
-PE_URL = BASE_URL + "postEvent"
-CA_URL = BASE_URL + "constructAuthURL"
-FB_URL = BASE_URL + "checkBusy"
+const PE_URL = BASE_URL + "postEvent"
+const CA_URL = BASE_URL + "constructAuthURL"
+const FB_URL = BASE_URL + "checkBusy"
 
 export async function fetchList(
   db,
@@ -106,6 +104,7 @@ function App(props) {
     signOut(auth)
       .then(() => {
         setUser(null)
+        window.location.search = ""
       })
       .catch((error) => {})
   }

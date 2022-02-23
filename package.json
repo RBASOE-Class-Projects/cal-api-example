@@ -14,6 +14,7 @@
   },
   "scripts": {
     "start": "REACT_APP_STAGE=local react-scripts start",
+    "emulate": "firebase emulators:start --only functions,firestore",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "build-dev": "REACT_APP_STAGE=dev react-scripts build",

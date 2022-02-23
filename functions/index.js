@@ -28,11 +28,10 @@ if (process.env.FUNCTIONS_EMULATOR === "true") {
 
 const db = admin.firestore()
 
-const oAuth2Client = new OAuth2(
-  "552664563294-9vitc92divm2b5hm4k8bir54orjvetqt.apps.googleusercontent.com",
-  "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",
-  REDIR_URL
-)
+const CLIENT_ID =
+  "552664563294-9vitc92divm2b5hm4k8bir54orjvetqt.apps.googleusercontent.com"
+const CLIENT_SECRET = "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"
+const oAuth2Client = new OAuth2(CLIENT_ID, CLIENT_SECRET, REDIR_URL)
 
 const addTokenToDatabase = async (tokens, email) => {
   return await db
