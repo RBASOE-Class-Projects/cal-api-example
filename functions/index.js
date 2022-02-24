@@ -36,9 +36,11 @@ const oAuth2Client = new OAuth2(
 )
 
 const addTokenToDatabase = async (tokens, email) => {
-  return await db
-    .doc(`tokens/${email}`)
-    .set({ refresh_token: tokens.refresh_token })
+  if (tokens.refresh_token) {
+    return await db
+      .doc(`tokens/${email}`)
+      .set({ refresh_token: tokens.refresh_token })
+  }
 }
 
 exports.postEventRedirect = functions.https.onRequest((req, res) => {
